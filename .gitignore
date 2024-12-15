@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-qne-node
+qne-node-v12
 
 # Test binary, built with `go test -c`
 *.test
