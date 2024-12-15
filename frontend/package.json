@@ -1,0 +1,25 @@
+{
+  "name": "qne-node-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "noise-handshake": "^4.0.2",
+    "nuxt": "^3.13.0",
+    "vue": "latest",
+    "vue-multiselect-listbox": "^0.4.5"
+  },
+  "devDependencies": {
+    "@iconify/vue": "^4.1.2",
+    "@types/postcss-load-config": "^3.0.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.12"
+  }
+}
