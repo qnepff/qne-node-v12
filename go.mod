@@ -1,4 +1,4 @@
-module qne-node-v12
+module github.com/qnepff/qne-node-v12
 
 go 1.21
 
