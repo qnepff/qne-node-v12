@@ -14,29 +14,89 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
+
+	"github.com/qnepff/qne-node-v12/internal/rest"
 )
 
 const (
 	addr = ":4445"
+	gatewayURL = "https://qne.name" // QNE gateway server URL
 )
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
+var (
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+
+	nodeID int64
+	nodeName string
+	segmentID string
+	certificate string
+	restClient *rest.Client
+	mu sync.RWMutex
+)
 
 type WebRTCMessage struct {
 	Type      string      `json:"type"`
 	Offer     interface{} `json:"offer,omitempty"`
 	Answer    interface{} `json:"answer,omitempty"`
 	Candidate interface{} `json:"candidate,omitempty"`
+}
+
+func start() error {
+	// Initialize REST client if not already done
+	if restClient == nil {
+		restClient = rest.NewClient(gatewayURL)
+	}
+
+	// Register in a segment and get assigned a node ID and temporary name
+	resp, err := restClient.RegisterInSegment()
+	if err != nil {
+		return fmt.Errorf("failed to register in segment: %v", err)
+	}
+
+	mu.Lock()
+	nodeID = resp.NodeID
+	nodeName = resp.NodeName
+	segmentID = resp.SegmentID
+	mu.Unlock()
+
+	log.Printf("Registered with node ID %d and name '%s' in segment: %s", nodeID, nodeName, segmentID)
+
+	// Get QNE certificate
+	certResp, err := restClient.GetQNECertificate(nodeID, nodeName, segmentID)
+	if err != nil {
+		return fmt.Errorf("failed to get QNE certificate: %v", err)
+	}
+
+	mu.Lock()
+	certificate = certResp.Certificate
+	mu.Unlock()
+
+	log.Printf("Retrieved QNE certificate")
+	return nil
+}
+
+func restart() error {
+	mu.Lock()
+	// Clear existing state
+	nodeID = 0
+	nodeName = ""
+	segmentID = ""
+	certificate = ""
+	mu.Unlock()
+
+	// Start fresh
+	return start()
 }
 
 func main() {
@@ -121,6 +181,10 @@ func main() {
 			log.Printf("HTTP/2 server error: %v", err)
 		}
 	}()
+
+	if err := start(); err != nil {
+		log.Fatalf("Failed to start: %v", err)
+	}
 
 	<-sigChan
 	fmt.Println("\nShutting down gracefully...")
